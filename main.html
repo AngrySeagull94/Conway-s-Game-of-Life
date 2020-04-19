@@ -12,16 +12,28 @@
 		<canvas id='drawField'></canvas>
 	</div>
 	<div id="content_gui" style="grid-column: 2; margin: 10px;">
-		<div id="gui_grid" style="display: grid; grid-template-columns: auto; justify-content: space-between;">
+		<div id="gui_grid" style="display: grid; grid-template-columns: auto; grid-row-gap: 1em; justify-content: space-between;">
 			<h1 style="grid-row: 1;">Conway's game of life</h1>
-			<p style="text-align: center;">Simulation options</p>
-			<div style="line-height: 4em;">
-				Speed:
-				<input type="range" id="sim_speed" name="sim_speed" min="10" max="1000" step="5" value="50" onchange="change_speed()">
-				<label id="sim_speed_text" >50</label>
+			<form>
+				<fieldset>
+					<legend>Simulation options</legend>
+					<span>Speed(ms):</span>
+					<label id="sim_speed_text"></label><br>
+					<input type="range" id="sim_speed" name="sim_speed" min="10" max="1000" step="5" value="50" onchange="change_speed()"><br>
+					<input type="button" name="pause_the_world" id='pause_the_world' style="height: 4em; width: 10em;" value="Start" onclick="handle_button()">
+				</fieldset>
+			</form>
+			<div align="right" style="line-height: 2em;">
 			</div>
-			</table>
-			<button id='pause_the_world' style="height: 5em; width: 10em;" onclick="handle_button()">Start</button>
+			<form>
+				<fieldset>
+					<legend>Random generator</legend>
+					<span>Generator density:</span>
+					<label id="generator_density_text"></label><br>
+					<input type="range" id="generator_density" name="generator_density" min="0.1" max="1" step="0.05" value="0.2" onchange="change_density()"><br>
+					<input type="button" name="generate_random" id='generate_random' style="height: 4em; width: 10em;" value="Generate random" onclick="generate()">
+				</fieldset>
+			</form>
 		</div>
 	</div>
 </div>
@@ -39,7 +51,7 @@
 			this.canvas = undefined
 
 			// Cell parameters
-			this.size_of_cell = 10
+			this.size_of_cell = 2
 			this.cell_number_vertical   = 0
 			this.cell_number_horizontal = 0
 			this.cell_color = "#00f2f2"
@@ -102,6 +114,11 @@
 		var range = document.getElementById('sim_speed')
 		range.value = range.defaultValue
 		change_speed()
+
+		// Set default density
+		var d = document.getElementById('generator_density')
+		d.value = d.defaultValue
+		change_density()
 	}
 
 	function update() {
@@ -216,7 +233,7 @@
 
 	function handle_button() {
 		context.sim_is_stopped = !context.sim_is_stopped
-		document.getElementById('pause_the_world').innerHTML = context.sim_is_stopped ? "Start" : "Stop"
+		document.getElementById('pause_the_world').value = context.sim_is_stopped ? "Start" : "Stop"
 		if (context.sim_is_stopped) {
 			clearInterval(context.update_interval_id)
 			context.update_interval_id = -1
@@ -235,6 +252,24 @@
 		{
 			clearInterval(context.update_interval_id)
 			context.update_interval_id = setInterval(update, context.update_ms)
+		}
+	}
+
+	function change_density() {
+		var d = document.getElementById('generator_density')
+		document.getElementById('generator_density_text').innerHTML = d.value
+	}
+
+	function generate() {
+		var density = document.getElementById('generator_density').value
+		var map = context.current_cycle_map
+
+		for (var i = map.length - 1; i >= 0; i--) {
+			var row = map[i]
+			for (var j = row.length - 1; j >= 0; j--) {
+				var cell = row[j]
+				cell.alive = (Math.random() <= density)? true : false
+			}
 		}
 	}
 
