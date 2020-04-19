@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<title>Life</title>
+		<meta charset="utf-8">
+	</head>
+
+	<body bgcolor="#ccc">
+
+	<canvas id='drawField' style="margin: 10px"></canvas>
+	<button id='pause_the_world' onclick="handle_button()">Start</button>
+
+	<script type="text/javascript">
+
+	class Cell
+	{
+		constructor(v_index, h_index)
+		{
+			this.v = v_index
+			this.h = h_index
+			this.alive = false
+		}
+	}
+	var UPDATE_FREQUENCY = 50
+	const size_of_cell = 3
+	var world_is_stopped = true
+	var can_use_mouse = true
+	var draw_frame_id = 0
+	var cells_vert = 0
+	var cells_hor  = 0
+	var cell_color = "#00f2f2"
+
+	cell_field = undefined
+	prev_cells_field = undefined
+
+	draw_canvas = document.getElementById('drawField')
+
+	// ====== Main code ======
+	init(draw_canvas)
+	//update_timer = setInterval(update, UPDATE_FREQUENCY)
+	draw_timer = setInterval(draw, 50, draw_canvas)
+	// =======================
+
+	function init(canvas) {
+		h = window.outerHeight * 0.8
+		//w = window.innerWidth * 0.8
+		w = h // square field
+
+		cells_vert = Math.floor(h / size_of_cell)
+		cells_hor = Math.floor(w / size_of_cell)
+		canvas.width  = cells_hor  * size_of_cell
+		canvas.height = cells_vert * size_of_cell
+
+		curr_cells_field = new Array(cells_vert)
+		prev_cells_field = new Array(cells_vert)
+		for (var i = curr_cells_field.length - 1; i >= 0; i--) {
+			curr_cells_field[i] = new Array(cells_hor)
+			prev_cells_field[i] = new Array(cells_hor)
+			for (var j = curr_cells_field[i].length - 1; j >= 0; j--) {
+				curr_cells_field[i][j] = new Cell(i, j)
+				prev_cells_field[i][j] = new Cell(i, j)
+			}
+		}
+
+		console.log('Create life field ', cells_hor, 'x', cells_vert)
+
+		canvas.addEventListener("mousedown", function(event){ doMouseDown(canvas, event) }, false)
+
+	}
+
+	function update() {
+		new_cell_field = prev_cells_field
+		for (var i = curr_cells_field.length - 1; i >= 0; i--) {
+			var cell_row = curr_cells_field[i]
+			for (var j = cell_row.length - 1; j >= 0; j--) {
+				cell = cell_row[j]
+				//Gather adjacent cells status
+				v_pos = i
+				h_pos = j
+				up_index    = v_pos - 1
+				down_index  = v_pos + 1
+				left_index  = h_pos - 1
+				right_index = h_pos + 1
+				if (up_index < 0) {
+					up_index = curr_cells_field.length - 1
+				}
+				if (down_index >= curr_cells_field.length) {
+					down_index = 0
+				}
+				if (left_index < 0) {
+					left_index = cell_row.length - 1
+				}
+				if (right_index >= cell_row.length) {
+					right_index = 0
+				}
+				new_cell_field[i][j].alive = false
+				population =
+				  (curr_cells_field[up_index][h_pos].alive === true? 1: 0) +
+				  (curr_cells_field[up_index][right_index].alive === true? 1: 0) +
+				  (curr_cells_field[v_pos][right_index].alive === true? 1: 0) +
+				  (curr_cells_field[down_index][right_index].alive === true? 1: 0) +
+				  (curr_cells_field[down_index][h_pos].alive === true? 1: 0) +
+				  (curr_cells_field[down_index][left_index].alive === true? 1: 0) +
+				  (curr_cells_field[v_pos][left_index].alive === true? 1: 0) +
+				  (curr_cells_field[up_index][left_index].alive === true? 1: 0)
+				if (population < 2 || population > 3) {
+					new_cell_field[i][j].alive = false
+					continue
+				}
+				if ((cell.alive === true) && (population >= 2 && population < 4)) {
+					new_cell_field[i][j].alive = true
+					continue
+				}
+				if ((cell.alive === false) && (population === 3)) {
+					new_cell_field[i][j].alive = true
+					continue
+				}
+			}
+		}
+		prev_cells_field = curr_cells_field
+		curr_cells_field = new_cell_field
+	}
+
+	function doMouseDown(canvas, event) {
+		const rect = canvas.getBoundingClientRect()
+		const x = event.clientX - rect.left
+		const y = event.clientY - rect.top
+		//console.log("x: " + x + " y: " + y)
+		if (can_use_mouse) {
+			h_index = Math.floor(x / size_of_cell)
+			v_index = Math.floor(y / size_of_cell)
+			//console.log(v_index, h_index)
+			curr_cells_field[v_index][h_index].alive = true
+		}
+		//console.log(curr_cells_field)
+	}
+
+	function draw(canvas) {
+		draw_frame_id += 1
+		//console.log(draw_frame_id)
+		var ctx = canvas.getContext('2d')
+		// Reset field
+		ctx.fillStyle = "#555"
+		ctx.fillRect(0,0,canvas.width, canvas.height)
+		//draw_lines(ctx)
+		draw_cells(ctx, curr_cells_field)
+		ctx.stroke()
+	}
+
+	function draw_lines(ctx) {
+		// Create rows and columns
+		ctx.strokeStyle = "#666"
+		ctx.lineWidth = 1
+		// Rows
+		ctx.beginPath()
+		for (var i = cells_vert - 1; i >= 0; i--) {
+			y = i * size_of_cell - 0.5
+			ctx.moveTo(0, y)
+			ctx.lineTo(draw_canvas.height, y)
+		}
+		// Columns
+		for (var i = cells_hor - 1; i >= 0; i--) {
+			x = i * size_of_cell - 0.5
+			ctx.moveTo(x, 0)
+			ctx.lineTo(x, draw_canvas.width)
+		}
+		ctx.closePath()
+	}
+
+	function draw_cells(ctx, cell_field) {
+		ctx.fillStyle = cell_color
+		for (var i = cell_field.length - 1; i >= 0; i--) {
+			var cell_row = cell_field[i]
+			for (var j = cell_row.length - 1; j >= 0; j--) {
+				cell = cell_row[j]
+				if (cell.alive === false)
+					continue
+				ctx.fillRect(j * size_of_cell, i * size_of_cell, size_of_cell, size_of_cell)
+			}
+		}
+	}
+
+	function handle_button() {
+		world_is_stopped = !world_is_stopped
+		document.getElementById('pause_the_world').innerHTML = world_is_stopped ? "Start" : "Stop"
+		if (world_is_stopped) {
+			clearInterval(update_timer)
+			update_timer = -1
+		} else {
+			update_timer = setInterval(update, UPDATE_FREQUENCY)
+		}
+		console.log('World is on hold ', world_is_stopped)
+	}
+
+	</script>
+	</body>
+</html>
