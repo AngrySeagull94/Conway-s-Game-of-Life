@@ -17,7 +17,7 @@
 			<p style="text-align: center;">Simulation options</p>
 			<div style="line-height: 4em;">
 				Speed:
-				<input type="range" id="sim_speed" name="sim_speed" min="10" max="1000" step="10" value="50" onchange="change_speed()">
+				<input type="range" id="sim_speed" name="sim_speed" min="10" max="1000" step="5" value="50" onchange="change_speed()">
 				<label id="sim_speed_text" >50</label>
 			</div>
 			</table>
@@ -29,6 +29,24 @@
 
 	class Context {
 		constructor() {
+			// UI parameters
+			this.update_ms = 50
+			this.update_interval_id = -1
+			this.draw_interval_id   = -1
+			this.sim_is_stopped = true
+			this.can_use_mouse  = true
+			this.draw_frame_id = 0
+			this.canvas = undefined
+
+			// Cell parameters
+			this.size_of_cell = 10
+			this.cell_number_vertical   = 0
+			this.cell_number_horizontal = 0
+			this.cell_color = "#00f2f2"
+
+			// Map containers
+			this.current_cycle_map = undefined
+			this.previous_cycle_map    = undefined
 		}
 	}
 
@@ -39,17 +57,8 @@
 			this.alive = false
 		}
 	}
-	var UPDATE_FREQUENCY = 50
-	const size_of_cell = 10
-	var world_is_stopped = true
-	var can_use_mouse = true
-	var draw_frame_id = 0
-	var cells_vert = 0
-	var cells_hor  = 0
-	var cell_color = "#00f2f2"
 
-	cell_field = undefined
-	prev_cells_field = undefined
+	context = new Context()
 
 	draw_canvas = document.getElementById('drawField')
 
@@ -63,23 +72,29 @@
 		//w = window.innerWidth * 0.8
 		w = h // square field
 
-		cells_vert = Math.floor(h / size_of_cell)
-		cells_hor = Math.floor(w / size_of_cell)
-		canvas.width  = cells_hor  * size_of_cell
-		canvas.height = cells_vert * size_of_cell
+		context.cell_number_vertical = Math.floor(h / context.size_of_cell)
+		context.cell_number_horizontal = Math.floor(w / context.size_of_cell)
+		canvas.width  = context.cell_number_horizontal  * context.size_of_cell
+		canvas.height = context.cell_number_vertical * context.size_of_cell
 
-		curr_cells_field = new Array(cells_vert)
-		prev_cells_field = new Array(cells_vert)
-		for (var i = curr_cells_field.length - 1; i >= 0; i--) {
-			curr_cells_field[i] = new Array(cells_hor)
-			prev_cells_field[i] = new Array(cells_hor)
-			for (var j = curr_cells_field[i].length - 1; j >= 0; j--) {
-				curr_cells_field[i][j] = new Cell(i, j)
-				prev_cells_field[i][j] = new Cell(i, j)
+		context.canvas = canvas
+
+		var curr_cycle = new Array(context.cell_number_vertical)
+		var prev_cycle = new Array(context.cell_number_vertical)
+		for (var i = curr_cycle.length - 1; i >= 0; i--) {
+			curr_cycle[i] = new Array(context.cell_number_horizontal)
+			prev_cycle[i] = new Array(context.cell_number_horizontal)
+			for (var j = curr_cycle[i].length - 1; j >= 0; j--) {
+				curr_cycle[i][j] = new Cell(i, j)
+				prev_cycle[i][j] = new Cell(i, j)
 			}
 		}
 
-		console.log('Create life field ', cells_hor, 'x', cells_vert)
+		context.current_cycle_map  = curr_cycle
+		context.previous_cycle_map = prev_cycle
+
+
+		console.log('Create life field ', context.cell_number_horizontal, 'x', context.cell_number_vertical)
 
 		canvas.addEventListener("mousedown", function(event){ doMouseDown(canvas, event) }, false)
 
@@ -90,56 +105,53 @@
 	}
 
 	function update() {
-		new_cell_field = prev_cells_field
-		for (var i = curr_cells_field.length - 1; i >= 0; i--) {
-			var cell_row = curr_cells_field[i]
+		var new_cycle  = context.previous_cycle_map
+		var curr_cycle = context.current_cycle_map
+		for (var i = curr_cycle.length - 1; i >= 0; i--) {
+			var cell_row = curr_cycle[i]
 			for (var j = cell_row.length - 1; j >= 0; j--) {
 				cell = cell_row[j]
-				//Gather adjacent cells status
+
+				//Wrap boundaries if needed
 				v_pos = i
 				h_pos = j
 				up_index    = v_pos - 1
 				down_index  = v_pos + 1
 				left_index  = h_pos - 1
 				right_index = h_pos + 1
-				if (up_index < 0) {
-					up_index = curr_cells_field.length - 1
-				}
-				if (down_index >= curr_cells_field.length) {
-					down_index = 0
-				}
-				if (left_index < 0) {
-					left_index = cell_row.length - 1
-				}
-				if (right_index >= cell_row.length) {
-					right_index = 0
-				}
-				new_cell_field[i][j].alive = false
+				if (up_index < 0)                    { up_index    = curr_cycle.length - 1 }
+				if (down_index >= curr_cycle.length) { down_index  = 0                     }
+				if (left_index < 0)                  { left_index  = cell_row.length - 1   }
+				if (right_index >= cell_row.length)  { right_index = 0                     }
+
+				new_cycle[i][j].alive = false
+
+				//Gather adjacent cells status
 				population =
-				  (curr_cells_field[up_index][h_pos].alive === true? 1: 0) +
-				  (curr_cells_field[up_index][right_index].alive === true? 1: 0) +
-				  (curr_cells_field[v_pos][right_index].alive === true? 1: 0) +
-				  (curr_cells_field[down_index][right_index].alive === true? 1: 0) +
-				  (curr_cells_field[down_index][h_pos].alive === true? 1: 0) +
-				  (curr_cells_field[down_index][left_index].alive === true? 1: 0) +
-				  (curr_cells_field[v_pos][left_index].alive === true? 1: 0) +
-				  (curr_cells_field[up_index][left_index].alive === true? 1: 0)
+				  (curr_cycle[up_index][h_pos].alive === true? 1: 0) +
+				  (curr_cycle[up_index][right_index].alive === true? 1: 0) +
+				  (curr_cycle[v_pos][right_index].alive === true? 1: 0) +
+				  (curr_cycle[down_index][right_index].alive === true? 1: 0) +
+				  (curr_cycle[down_index][h_pos].alive === true? 1: 0) +
+				  (curr_cycle[down_index][left_index].alive === true? 1: 0) +
+				  (curr_cycle[v_pos][left_index].alive === true? 1: 0) +
+				  (curr_cycle[up_index][left_index].alive === true? 1: 0)
 				if (population < 2 || population > 3) {
-					new_cell_field[i][j].alive = false
+					new_cycle[i][j].alive = false
 					continue
 				}
 				if ((cell.alive === true) && (population >= 2 && population < 4)) {
-					new_cell_field[i][j].alive = true
+					new_cycle[i][j].alive = true
 					continue
 				}
 				if ((cell.alive === false) && (population === 3)) {
-					new_cell_field[i][j].alive = true
+					new_cycle[i][j].alive = true
 					continue
 				}
 			}
 		}
-		prev_cells_field = curr_cells_field
-		curr_cells_field = new_cell_field
+		context.previous_cycle_map = curr_cycle
+		context.current_cycle_map  = new_cycle
 	}
 
 	function doMouseDown(canvas, event) {
@@ -147,24 +159,22 @@
 		const x = event.clientX - rect.left
 		const y = event.clientY - rect.top
 		//console.log("x: " + x + " y: " + y)
-		if (can_use_mouse) {
-			h_index = Math.floor(x / size_of_cell)
-			v_index = Math.floor(y / size_of_cell)
-			//console.log(v_index, h_index)
-			curr_cells_field[v_index][h_index].alive = true
+		if (context.can_use_mouse) {
+			h_index = Math.floor(x / context.size_of_cell)
+			v_index = Math.floor(y / context.size_of_cell)
+			context.current_cycle_map[v_index][h_index].alive = true
 		}
-		//console.log(curr_cells_field)
 	}
 
 	function draw(canvas) {
-		draw_frame_id += 1
+		context.draw_frame_id += 1
 		//console.log(draw_frame_id)
 		var ctx = canvas.getContext('2d')
 		// Reset field
 		ctx.fillStyle = "#555"
 		ctx.fillRect(0,0,canvas.width, canvas.height)
 		//draw_lines(ctx)
-		draw_cells(ctx, curr_cells_field)
+		draw_cells(ctx)
 		ctx.stroke()
 	}
 
@@ -174,55 +184,58 @@
 		ctx.lineWidth = 1
 		// Rows
 		ctx.beginPath()
-		for (var i = cells_vert - 1; i >= 0; i--) {
-			y = i * size_of_cell - 0.5
+		for (var i = context.cell_number_vertical - 1; i >= 0; i--) {
+			y = i * context.size_of_cell - 0.5
 			ctx.moveTo(0, y)
 			ctx.lineTo(draw_canvas.height, y)
 		}
 		// Columns
-		for (var i = cells_hor - 1; i >= 0; i--) {
-			x = i * size_of_cell - 0.5
+		for (var i = context.cell_number_horizontal - 1; i >= 0; i--) {
+			x = i * context.size_of_cell - 0.5
 			ctx.moveTo(x, 0)
 			ctx.lineTo(x, draw_canvas.width)
 		}
 		ctx.closePath()
 	}
 
-	function draw_cells(ctx, cell_field) {
-		ctx.fillStyle = cell_color
-		for (var i = cell_field.length - 1; i >= 0; i--) {
-			var cell_row = cell_field[i]
+	function draw_cells(ctx) {
+		ctx.fillStyle = context.cell_color
+		for (var i = context.current_cycle_map.length - 1; i >= 0; i--) {
+			var cell_row = context.current_cycle_map[i]
 			for (var j = cell_row.length - 1; j >= 0; j--) {
 				cell = cell_row[j]
 				if (cell.alive === false)
 					continue
-				ctx.fillRect(j * size_of_cell, i * size_of_cell, size_of_cell, size_of_cell)
+				ctx.fillRect(j * context.size_of_cell,
+				             i * context.size_of_cell,
+				             context.size_of_cell,
+				             context.size_of_cell)
 			}
 		}
 	}
 
 	function handle_button() {
-		world_is_stopped = !world_is_stopped
-		document.getElementById('pause_the_world').innerHTML = world_is_stopped ? "Start" : "Stop"
-		if (world_is_stopped) {
-			clearInterval(update_timer)
-			update_timer = -1
+		context.sim_is_stopped = !context.sim_is_stopped
+		document.getElementById('pause_the_world').innerHTML = context.sim_is_stopped ? "Start" : "Stop"
+		if (context.sim_is_stopped) {
+			clearInterval(context.update_interval_id)
+			context.update_interval_id = -1
 		} else {
-			update_timer = setup_update(UPDATE_FREQUENCY)
+			context.update_interval_id = setInterval(update, context.update_ms)
 		}
-		console.log('World is on hold ', world_is_stopped)
-	}
-
-	function setup_update(interval) {
-		clearInterval(interval)
-		return setInterval(update, interval)
+		console.log('Simulation is ', context.sim_is_stopped ? "stopped" : "resumed")
 	}
 
 	function change_speed() {
 		var range = document.getElementById('sim_speed')
-		UPDATE_FREQUENCY = range.value
-		console.log("Simulation speed changed to ", UPDATE_FREQUENCY)
-		document.getElementById('sim_speed_text').innerHTML = UPDATE_FREQUENCY
+		context.update_ms = range.value
+		console.log("Simulation speed changed to ", context.update_ms)
+		document.getElementById('sim_speed_text').innerHTML = context.update_ms
+		if (!context.sim_is_stopped)
+		{
+			clearInterval(context.update_interval_id)
+			context.update_interval_id = setInterval(update, context.update_ms)
+		}
 	}
 
 	</script>
