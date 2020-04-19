@@ -1,28 +1,46 @@
 <!DOCTYPE html>
 <html>
-	<head>
-		<title>Life</title>
-		<meta charset="utf-8">
-	</head>
+<head>
+	<title>Life</title>
+	<meta charset="utf-8">
+</head>
 
-	<body bgcolor="#ccc">
+<body bgcolor="#ccc">
 
-	<canvas id='drawField' style="margin: 10px"></canvas>
-	<button id='pause_the_world' onclick="handle_button()">Start</button>
+<div id="content_grid" style="display: grid; grid-template-columns: auto auto; justify-content: start;">
+	<div id="content_canvas" style="grid-column: 1; margin: 10px; grid-row-start: 1;  grid-row-end: 5;">
+		<canvas id='drawField'></canvas>
+	</div>
+	<div id="content_gui" style="grid-column: 2; margin: 10px;">
+		<div id="gui_grid" style="display: grid; grid-template-columns: auto; justify-content: space-between;">
+			<h1 style="grid-row: 1;">Conway's game of life</h1>
+			<p style="text-align: center;">Simulation options</p>
+			<div style="line-height: 4em;">
+				Speed:
+				<input type="range" id="sim_speed" name="sim_speed" min="10" max="1000" step="10" value="50" onchange="change_speed()">
+				<label id="sim_speed_text" >50</label>
+			</div>
+			</table>
+			<button id='pause_the_world' style="height: 5em; width: 10em;" onclick="handle_button()">Start</button>
+		</div>
+	</div>
+</div>
+<script type="text/javascript">
 
-	<script type="text/javascript">
+	class Context {
+		constructor() {
+		}
+	}
 
-	class Cell
-	{
-		constructor(v_index, h_index)
-		{
+	class Cell {
+		constructor(v_index, h_index) {
 			this.v = v_index
 			this.h = h_index
 			this.alive = false
 		}
 	}
 	var UPDATE_FREQUENCY = 50
-	const size_of_cell = 3
+	const size_of_cell = 10
 	var world_is_stopped = true
 	var can_use_mouse = true
 	var draw_frame_id = 0
@@ -37,7 +55,6 @@
 
 	// ====== Main code ======
 	init(draw_canvas)
-	//update_timer = setInterval(update, UPDATE_FREQUENCY)
 	draw_timer = setInterval(draw, 50, draw_canvas)
 	// =======================
 
@@ -66,6 +83,10 @@
 
 		canvas.addEventListener("mousedown", function(event){ doMouseDown(canvas, event) }, false)
 
+		// Set simulation speed
+		var range = document.getElementById('sim_speed')
+		range.value = range.defaultValue
+		change_speed()
 	}
 
 	function update() {
@@ -187,9 +208,21 @@
 			clearInterval(update_timer)
 			update_timer = -1
 		} else {
-			update_timer = setInterval(update, UPDATE_FREQUENCY)
+			update_timer = setup_update(UPDATE_FREQUENCY)
 		}
 		console.log('World is on hold ', world_is_stopped)
+	}
+
+	function setup_update(interval) {
+		clearInterval(interval)
+		return setInterval(update, interval)
+	}
+
+	function change_speed() {
+		var range = document.getElementById('sim_speed')
+		UPDATE_FREQUENCY = range.value
+		console.log("Simulation speed changed to ", UPDATE_FREQUENCY)
+		document.getElementById('sim_speed_text').innerHTML = UPDATE_FREQUENCY
 	}
 
 	</script>
