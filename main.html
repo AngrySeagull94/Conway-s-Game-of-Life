@@ -5,7 +5,7 @@
 	<meta charset="utf-8">
 </head>
 
-<body bgcolor="#ccc">
+<body bgcolor="#ddd">
 
 <div id="content_grid" style="display: grid; grid-template-columns: auto auto; justify-content: start;">
 	<div id="content_canvas" style="grid-column: 1; margin: 10px; grid-row-start: 1;  grid-row-end: 5;">
@@ -19,7 +19,7 @@
 					<legend>Simulation options</legend>
 					<span>Speed(ms):</span>
 					<label id="sim_speed_text"></label><br>
-					<input type="range" id="sim_speed" name="sim_speed" min="10" max="1000" step="5" value="50" onchange="change_speed()"><br>
+					<input type="range" id="sim_speed" name="sim_speed" min="10" max="1000" step="5" value="400" onchange="change_speed()"><br>
 					<input type="button" name="pause_the_world" id='pause_the_world' style="height: 4em; width: 10em;" value="Start" onclick="handle_button()">
 				</fieldset>
 			</form>
@@ -34,13 +34,13 @@
 			</form>
 			<form style="grid-column: 2; grid-row-start: 2; grid-row-end: 4">
 				<fieldset>
-					<legend>Spaceship creation</legend>
-					<input type="radio" id="nothing" name="ship" value="nothing" checked="true" onchange="set_space_object(this)">
-					<label for="nothing">Nothing</label><br>
-					<input type="radio" id="glider" name="ship" value="glider" onchange="set_space_object(this)">
-					<label for="glider">Glider</label><br>
-					<input type="radio" id="phoenix" name="ship" value="phoenix" onchange="set_space_object(this)">
-					<label for="phoenix">Phoenix</label><br>
+					<legend>Object factory</legend>
+					<input type="radio" id="cell_radio" name="ship" value="cell" checked="true" onchange="set_space_object(this)">
+					<label for="cell_radio">Cell</label><br>
+					<input type="radio" id="glider_radio" name="ship" value="glider" onchange="set_space_object(this)">
+					<label for="glider_radio">Glider</label><br>
+					<input type="radio" id="phoenix_radio" name="ship" value="phoenix" onchange="set_space_object(this)">
+					<label for="phoenix_radio">Phoenix</label><br>
 				</fieldset>
 			</form>
 		</div>
@@ -54,7 +54,7 @@
 	class Context {
 		constructor() {
 			// UI parameters
-			this.update_ms = 50
+			this.update_ms = 500
 			this.update_interval_id = -1
 			this.draw_interval_id   = -1
 			this.sim_is_stopped = true
@@ -64,10 +64,10 @@
 			this.space_object_function = create_cell
 
 			// Cell parameters
-			this.size_of_cell = 5
+			this.size_of_cell = 10
 			this.cell_number_vertical   = 0
 			this.cell_number_horizontal = 0
-			this.cell_color = "#00f2f2"
+			this.cell_color = "#111"
 
 			// Map containers
 			this.current_cycle_map = undefined
@@ -135,7 +135,7 @@
 
 		// Set default object drawing
 		context.space_object_function = create_cell
-		document.getElementById('nothing').checked = true
+		document.getElementById('cell_radio').checked = true
 	}
 
 	function update() {
@@ -205,16 +205,16 @@
 		//console.log(draw_frame_id)
 		var ctx = canvas.getContext('2d')
 		// Reset field
-		ctx.fillStyle = "#555"
+		ctx.fillStyle = "#fff"
 		ctx.fillRect(0,0,canvas.width, canvas.height)
-		//draw_lines(ctx)
+		draw_lines(ctx)
 		draw_cells(ctx)
 		ctx.stroke()
 	}
 
 	function draw_lines(ctx) {
 		// Create rows and columns
-		ctx.strokeStyle = "#666"
+		ctx.strokeStyle = "#aaa"
 		ctx.lineWidth = 1
 		// Rows
 		ctx.beginPath()
@@ -233,17 +233,24 @@
 	}
 
 	function draw_cells(ctx) {
-		ctx.fillStyle = context.cell_color
 		for (var i = context.current_cycle_map.length - 1; i >= 0; i--) {
 			var cell_row = context.current_cycle_map[i]
 			for (var j = cell_row.length - 1; j >= 0; j--) {
 				cell = cell_row[j]
-				if (cell.alive === false)
+				if (cell.alive === false) {
 					continue
-				ctx.fillRect(j * context.size_of_cell,
-				             i * context.size_of_cell,
-				             context.size_of_cell,
-				             context.size_of_cell)
+				} else {
+					ctx.fillStyle = "#fff"
+					ctx.fillRect(j * context.size_of_cell - 0.5,
+					             i * context.size_of_cell - 0.5,
+					             context.size_of_cell,
+					             context.size_of_cell)
+					ctx.fillStyle = context.cell_color
+					ctx.fillRect(j * context.size_of_cell,
+					             i * context.size_of_cell,
+					             context.size_of_cell - 1,
+					             context.size_of_cell - 1)
+				}
 			}
 		}
 	}
