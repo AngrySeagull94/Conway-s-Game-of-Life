@@ -19,8 +19,9 @@
 					<legend>Simulation options</legend>
 					<span>Speed(ms):</span>
 					<label id="sim_speed_text"></label><br>
-					<input type="range" id="sim_speed" name="sim_speed" min="10" max="1000" step="5" value="400" onchange="change_speed()"><br>
-					<input type="button" name="pause_the_world" id='pause_the_world' style="height: 4em; width: 10em;" value="Start" onclick="handle_button()">
+					<input type="range" id="sim_speed" name="sim_speed" min="10" max="1000" step="5" value="200" onchange="change_speed()"><br>
+					<input type="button" name="pause_the_world" id='pause_the_world' style="height: 4em; width: 10em;" value="Stopped" onclick="handle_button_start_stop()">
+					<input type="button" name="reset_the_world" id='reset_the_world' style="height: 4em; width: 10em;" value="Reset" onclick="handle_button_reset_field()">
 				</fieldset>
 			</form>
 			<form style="grid-row: 3">
@@ -54,7 +55,7 @@
 	class Context {
 		constructor() {
 			// UI parameters
-			this.update_ms = 500
+			this.update_ms = 200
 			this.update_interval_id = -1
 			this.draw_interval_id   = -1
 			this.sim_is_stopped = true
@@ -89,13 +90,14 @@
 
 	// ====== Main code ======
 	init(draw_canvas)
-	draw_timer = setInterval(draw, 50, draw_canvas)
+	draw_timer = setInterval(draw, 50)
 	// =======================
 
 	function init(canvas) {
 		h = window.outerHeight * 0.8
-		//w = window.innerWidth * 0.8
-		w = h // square field
+		w = window.outerWidth * 0.7
+		console.log('Canvas initial size', w, 'x', h)
+		//w = h // square field
 
 		context.cell_number_vertical = Math.floor(h / context.size_of_cell)
 		context.cell_number_horizontal = Math.floor(w / context.size_of_cell)
@@ -103,6 +105,8 @@
 		canvas.height = context.cell_number_vertical * context.size_of_cell
 
 		context.canvas = canvas
+
+		console.log('Canvas initial size', canvas.width, 'x', canvas.height)
 
 		var curr_cycle = new Array(context.cell_number_vertical)
 		var prev_cycle = new Array(context.cell_number_vertical)
@@ -127,6 +131,8 @@
 		var range = document.getElementById('sim_speed')
 		range.value = range.defaultValue
 		change_speed()
+
+		document.getElementById("pause_the_world").style.background= context.sim_is_stopped ? '#ff0000' : '#00ff00';
 
 		// Set default density
 		var d = document.getElementById('generator_density')
@@ -200,13 +206,19 @@
 		}
 	}
 
-	function draw(canvas) {
+	function draw() {
+		/*
+			-----> x
+			|
+			|
+			y
+		*/
 		context.draw_frame_id += 1
 		//console.log(draw_frame_id)
-		var ctx = canvas.getContext('2d')
+		var ctx = context.canvas.getContext('2d')
 		// Reset field
 		ctx.fillStyle = "#fff"
-		ctx.fillRect(0,0,canvas.width, canvas.height)
+		ctx.fillRect(0, 0, context.canvas.width, context.canvas.height)
 		draw_lines(ctx)
 		draw_cells(ctx)
 		ctx.stroke()
@@ -221,13 +233,13 @@
 		for (var i = context.cell_number_vertical - 1; i >= 0; i--) {
 			y = i * context.size_of_cell - 0.5
 			ctx.moveTo(0, y)
-			ctx.lineTo(draw_canvas.height, y)
+			ctx.lineTo(context.canvas.width, y)
 		}
 		// Columns
 		for (var i = context.cell_number_horizontal - 1; i >= 0; i--) {
 			x = i * context.size_of_cell - 0.5
 			ctx.moveTo(x, 0)
-			ctx.lineTo(x, draw_canvas.width)
+			ctx.lineTo(x, context.canvas.height)
 		}
 		ctx.closePath()
 	}
@@ -255,9 +267,10 @@
 		}
 	}
 
-	function handle_button() {
+	function handle_button_start_stop() {
 		context.sim_is_stopped = !context.sim_is_stopped
-		document.getElementById('pause_the_world').value = context.sim_is_stopped ? "Start" : "Stop"
+		document.getElementById('pause_the_world').value = context.sim_is_stopped ? "Stopped" : "Started"
+		document.getElementById("pause_the_world").style.background= context.sim_is_stopped ? '#ff0000' : '#00ff00';
 		if (context.sim_is_stopped) {
 			clearInterval(context.update_interval_id)
 			context.update_interval_id = -1
@@ -265,6 +278,15 @@
 			context.update_interval_id = setInterval(update, context.update_ms)
 		}
 		console.log('Simulation is ', context.sim_is_stopped ? "stopped" : "resumed")
+	}
+
+	function handle_button_reset_field() {
+		var map = context.current_cycle_map
+		for (var i = map.length - 1; i >= 0; i--) {
+			for (var j = map[i].length - 1; j >= 0; j--) {
+				map[i][j].alive = false
+			}
+		}
 	}
 
 	function change_speed() {
