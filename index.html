@@ -17,9 +17,10 @@
 			<form style="grid-row: 2">
 				<fieldset>
 					<legend>Simulation options</legend>
-					<span>Speed(ms):</span>
-					<label id="sim_speed_text"></label><br>
-					<input type="range" id="sim_speed" name="sim_speed" min="10" max="1000" step="5" value="200" onchange="change_speed()"><br>
+					<span>Slower</span>
+					<input type="range" id="sim_speed" name="sim_speed" min="0" max="9" step="1" value="3" onchange="change_speed()">
+					<span>Faster</span><br>
+					<hr>
 					<input type="button" name="pause_the_world" id='pause_the_world' style="height: 4em; width: 10em;" value="Stopped" onclick="handle_button_start_stop()">
 					<input type="button" name="reset_the_world" id='reset_the_world' style="height: 4em; width: 10em;" value="Reset" onclick="handle_button_reset_field()">
 				</fieldset>
@@ -64,6 +65,8 @@
 			this.draw_frame_id = 0
 			this.canvas = undefined
 			this.space_object_function = create_cell
+			this.sim_rate_threshold = [400,200,150,100,75,50,40,30,20,10]
+			this.sim_rate_threshold_index = 3
 
 			// Cell parameters
 			this.size_of_cell = 10
@@ -85,11 +88,11 @@
 		}
 	}
 
+	// ====== Main code ======
 	context = new Context()
 
 	draw_canvas = document.getElementById('drawField')
 
-	// ====== Main code ======
 	init(draw_canvas)
 	draw_timer = setInterval(draw, 50)
 	// =======================
@@ -270,15 +273,15 @@
 
 	function handle_button_start_stop() {
 		context.sim_is_stopped = !context.sim_is_stopped
-		document.getElementById('pause_the_world').value = context.sim_is_stopped ? "Stopped" : "Started"
-		document.getElementById("pause_the_world").style.background= context.sim_is_stopped ? '#ff0000' : '#00ff00';
+		document.getElementById("pause_the_world").value = context.sim_is_stopped ? "Stopped" : "Started"
+		document.getElementById("pause_the_world").style.background= context.sim_is_stopped ? "#ff0000" : "#00ff00";
 		if (context.sim_is_stopped) {
 			clearInterval(context.update_interval_id)
 			context.update_interval_id = -1
 		} else {
 			context.update_interval_id = setInterval(update, context.update_ms)
 		}
-		console.log('Simulation is ', context.sim_is_stopped ? "stopped" : "resumed")
+		console.log("Simulation is", context.sim_is_stopped ? "stopped" : "resumed")
 	}
 
 	function handle_button_reset_field() {
@@ -291,14 +294,16 @@
 	}
 
 	function change_speed() {
-		var range = document.getElementById('sim_speed')
-		context.update_ms = range.value
-		console.log("Simulation speed changed to ", context.update_ms)
-		document.getElementById('sim_speed_text').innerHTML = context.update_ms
+		var range = document.getElementById("sim_speed")
+		context.sim_rate_threshold_index = range.value
+		if (context.sim_rate_threshold_index >= context.sim_rate_threshold.length || context.sim_rate_threshold_index < 0) {
+			context.sim_rate_threshold_index = 0
+		}
+		console.log("Simulation rate changed to", context.sim_rate_threshold[context.sim_rate_threshold_index], "ms")
 		if (!context.sim_is_stopped)
 		{
 			clearInterval(context.update_interval_id)
-			context.update_interval_id = setInterval(update, context.update_ms)
+			context.update_interval_id = setInterval(update, context.sim_rate_threshold[context.sim_rate_threshold_index])
 		}
 	}
 
