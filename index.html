@@ -50,7 +50,7 @@
 <a href="https://github.com/AngrySeagull94/Conway-s-Game-of-Life">Github</a>
 <script type="text/javascript">
 	function create_cell(v_index, h_index) {
-		set_alive(v_index, h_index)
+		change_alive_state(v_index, h_index)
 	}
 
 	class Context {
@@ -363,11 +363,27 @@
 		}
 	}
 
-	function set_alive(v_index, h_index) {
-		//console.log(v_index, h_index)
+	function resolve_coordinates(v_index, h_index) {
 		v_index = resolve_index(context.cell_number_vertical, v_index)
 		h_index = resolve_index(context.cell_number_horizontal, h_index)
+		return [v_index, h_index]
+	}
+
+	function get_alive(v_index, h_index) {
+		[v_index, h_index] = resolve_coordinates(v_index, h_index)
+		return context.current_cycle_map[v_index][h_index].alive
+	}
+
+	function set_alive(v_index, h_index) {
+		//console.log(v_index, h_index)
+		[v_index, h_index] = resolve_coordinates(v_index, h_index)
 		context.current_cycle_map[v_index][h_index].alive = true
+	}
+
+	function change_alive_state(v_index, h_index) {
+		[v_index, h_index] = resolve_coordinates(v_index, h_index)
+		var state = context.current_cycle_map[v_index][h_index].alive
+		context.current_cycle_map[v_index][h_index].alive = !state
 	}
 
 	function resolve_index(max_index, index) {
